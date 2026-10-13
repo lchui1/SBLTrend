@@ -1,0 +1,9 @@
+{
+  "name": "SBL Trend",
+  "description": "Upload SBL / screening data to get trigger trends, statistics, charts, and a multi-sheet Excel report.",
+  "owner": "lchui",
+  "type": "fastapi",
+  "entry": "app:app",
+  "port": 8601,
+  "tags": ["SBL", "trend", "excel", "report"]
+}

@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBL Trend Analysis Dashboard</title>
+    <!-- Chart.js for interactive web visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #0071c5;
+            --primary-dark: #004b87;
+            --secondary: #00c7fd;
+            --bg-light: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 113, 197, 0.15);
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 4px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Upload & Controls Card */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .drop-zone {
+            border: 2px dashed #93c5fd;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .drop-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .drop-subtext {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        input[type="text"], select {
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+            background: #fff;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 113, 197, 0.1);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 11px 24px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 42px;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 2px 6px rgba(0, 113, 197, 0.3);
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        /* KPI Cards Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            border-left: 4px solid var(--primary);
+        }
+
+        .kpi-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 4px;
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Tabs Navigation */
+        .tabs-header {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Chart Grid Layout */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px;
+            height: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-card h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 12px;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+        }
+
+        /* Data Tables */
+        .table-responsive {
+            overflow-x: auto;
+            max-height: 480px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            text-align: left;
+        }
+
+        th {
+            background: #1f4e79;
+            color: #ffffff;
+            padding: 10px 14px;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        tr:nth-child(even) td {
+            background: #f9fafb;
+        }
+
+        tr:hover td {
+            background: #eff6ff;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .status-fails {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .status-pass {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* Loading Spinner & Toast */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #dbeafe;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .download-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 14px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 960px) {
+            .upload-grid {
+                grid-template-columns: 1fr;
+            }
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="font-weight: 600; color: var(--primary-dark);" id="loadingText">Processing SBL Data & Generating Trend Charts...</p>
+</div>
+
+<div class="container">
+    <!-- Header -->
+    <header>
+        <div>
+            <h1>SBL Trend Analysis Dashboard</h1>
+            <p>Statistical Bin Limit (SBL) Trigger Tracking, Excursion Trends & Multi-Worksheet Reports</p>
+        </div>
+        <div>
+            <span class="badge" id="serviceStatus">● Service Online</span>
+        </div>
+    </header>
+
+    <!-- Upload & Configuration Card -->
+    <div class="card">
+        <form id="uploadForm" class="upload-grid" onsubmit="event.preventDefault(); runAnalysis();">
+            <div class="form-group">
+                <label>Select Data File (.csv, .xlsx, .txt)</label>
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.txt" onchange="handleFileSelected(this)">
+                    <div class="drop-text" id="dropText">📁 Drag & Drop SBL File or Click to Browse</div>
+                    <div class="drop-subtext">Supports CSV, Excel (.xlsx/.xls), or tab-delimited TXT</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="monthsSelect">Historical Data Window</label>
+                <select id="monthsSelect">
+                    <option value="6" selected>Last 6 Months (Default)</option>
+                    <option value="3">Last 3 Months</option>
+                    <option value="12">Last 12 Months</option>
+                    <option value="24">Last 24 Months</option>
+                    <option value="0">All Historical Data (No Cutoff)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="filterVal">Filter Values (Optional)</label>
+                <input type="text" id="filterVal" placeholder="e.g. A01, A90 or MTL">
+            </div>
+
+            <button type="submit" class="btn" id="analyzeBtn">
+                <span>🚀 Run Analysis</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Results Section (Hidden until analysis runs) -->
+    <div id="resultsSection" style="display: none;">
+        <!-- Download Action Bar -->
+        <div class="download-bar">
+            <div>
+                <strong style="color: var(--primary-dark);">Analysis Complete!</strong>
+                <span style="font-size: 13px; color: var(--text-muted); margin-left: 8px;" id="reportInfoText"></span>
+            </div>
+            <button class="btn btn-success" onclick="downloadExcel()">
+                <span>📥 Download Multi-Tab Excel Report (.xlsx)</span>
+            </button>
+        </div>
+
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card" style="border-left-color: #0071c5;">
+                <div class="kpi-title">Overall Trigger Rate</div>
+                <div class="kpi-value" id="kpiTriggerRate">0.0%</div>
+                <div class="kpi-sub">SBL Triggered Lots / Total Lots</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #ef4444;">
+                <div class="kpi-title">Triggered Lots</div>
+                <div class="kpi-value" id="kpiTriggeredLots">0</div>
+                <div class="kpi-sub">Unique lots with FAILS</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #10b981;">
+                <div class="kpi-title">Total Tested Lots</div>
+                <div class="kpi-value" id="kpiTotalLots">0</div>
+                <div class="kpi-sub">Unique lots evaluated</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #8b5cf6;">
+                <div class="kpi-title">Deduplicated Records</div>
+                <div class="kpi-value" id="kpiDedupRows">0</div>
+                <div class="kpi-sub" id="kpiRawRowsSub">From raw dataset</div>
+            </div>
+        </div>
+
+        <!-- Dashboard Tabs -->
+        <div class="card">
+            <div class="tabs-header">
+                <button class="tab-btn active" onclick="switchTab('tabWW', this)">📅 Work Week Trend</button>
+                <button class="tab-btn" onclick="switchTab('tabSite', this)">🏭 Site Trend</button>
+                <button class="tab-btn" onclick="switchTab('tabProduct', this)">💻 Product Trend</button>
+                <button class="tab-btn" onclick="switchTab('tabScreenplay', this)">📋 Screenplay Trend</button>
+                <button class="tab-btn" onclick="switchTab('tabTriggered', this)">⚠️ Triggered Details (FAILS)</button>
+                <button class="tab-btn" onclick="switchTab('tabFullData', this)">📄 Full Data Preview</button>
+            </div>
+
+            <!-- TAB 1: Work Week Trend -->
+            <div class="tab-content active" id="tabWW">
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3>SBL Triggered Lots Count by Work Week</h3>
+                        <div class="chart-container"><canvas id="chartWwCounts"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>SBL Trigger Rate (%) by Work Week</h3>
+                        <div class="chart-container"><canvas id="chartWwRates"></canvas></div>
+                    </div>
+                </div>
+                <h4 style="margin: 16px 0 8px 0; font-size: 13px;">Work Week Summary Table</h4>
+                <div class="table-responsive" id="tableWwContainer"></div>
+            </div>
+
+            <!-- TAB 2: Site Trend -->
+            <div class="tab-content" id="tabSite">
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3>Site Triggered Lots Trend Over Time</h3>
+                        <div class="chart-container"><canvas id="chartSiteCounts"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Site SBL Trigger Rate (%) Trend</h3>
+                        <div class="chart-container"><canvas id="chartSiteRates"></canvas></div>
+                    </div>
+                </div>
+                <h4 style="margin: 16px 0 8px 0; font-size: 13px;">Site Fallout Summary & Pareto</h4>
+                <div class="table-responsive" id="tableSiteContainer"></div>
+            </div>
+
+            <!-- TAB 3: Product Trend -->
+            <div class="tab-content" id="tabProduct">
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3>Product Triggered Lots Trend Over Time</h3>
+                        <div class="chart-container"><canvas id="chartProductCounts"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Product SBL Trigger Rate (%) Trend</h3>
+                        <div class="chart-container"><canvas id="chartProductRates"></canvas></div>
+                    </div>
+                </div>
+                <h4 style="margin: 16px 0 8px 0; font-size: 13px;">Product Fallout Summary & Pareto</h4>
+                <div class="table-responsive" id="tableProductContainer"></div>
+            </div>
+
+            <!-- TAB 4: Screenplay Trend -->
+            <div class="tab-content" id="tabScreenplay">
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3>Top Screenplays Trigger Count Over Time</h3>
+                        <div class="chart-container"><canvas id="chartScreenplayCounts"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Screenplay SBL Trigger Rate (%) Trend</h3>
+                        <div class="chart-container"><canvas id="chartScreenplayRates"></canvas></div>
+                    </div>
+                </div>
+                <h4 style="margin: 16px 0 8px 0; font-size: 13px;">Screenplay Fallout Summary & Pareto</h4>
+                <div class="table-responsive" id="tableScreenplayContainer"></div>
+            </div>
+
+            <!-- TAB 5: Triggered Details -->
+            <div class="tab-content" id="tabTriggered">
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+                    Showing records that triggered SBL (<code>CONDITIONNAME == 'FAILS'</code>). Complete dataset available in the downloaded Excel workbook.
+                </p>
+                <div class="table-responsive" id="tableTriggeredContainer"></div>
+            </div>
+
+            <!-- TAB 6: Full Data Preview -->
+            <div class="tab-content" id="tabFullData">
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+                    Preview of the 14 standard schema columns from the dataset.
+                </p>
+                <div class="table-responsive" id="tableFullDataContainer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentJobId = null;
+    let chartInstances = {};
+    let currentSelectedFile = null;
+
+    // --- Drag and Drop & File Selection Handling ---
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const dropText = document.getElementById('dropText');
+
+    // Prevent default browser drag/drop behavior for window
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        window.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'dragend'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length > 0) {
+            setFile(dt.files[0]);
+            try {
+                // Sync with fileInput element if supported
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(dt.files[0]);
+                fileInput.files = dataTransfer.files;
+            } catch (err) {
+                // Fallback for older browsers
+            }
+        }
+    }, false);
+
+    function handleFileSelected(input) {
+        if (input.files && input.files[0]) {
+            setFile(input.files[0]);
+        }
+    }
+
+    function setFile(file) {
+        currentSelectedFile = file;
+        dropText.innerText = '📄 ' + file.name + ` (${(file.size / 1024).toFixed(1)} KB)`;
+        dropZone.style.borderColor = '#10b981';
+        dropZone.style.background = '#f0fdf4';
+    }
+
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    async function runAnalysis() {
+        const fileToUpload = currentSelectedFile || (fileInput.files && fileInput.files[0]);
+        if (!fileToUpload) {
+            alert('Please select or drop a data file.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileToUpload);
+        formData.append('months', document.getElementById('monthsSelect').value);
+        formData.append('filter_val', document.getElementById('filterVal').value);
+
+        document.getElementById('loadingOverlay').style.display = 'flex';
+
+        try {
+            const resp = await fetch('/api/analyze', { method: 'POST', body: formData });
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Analysis failed');
+            }
+            const data = await resp.json();
+            renderDashboard(data);
+        } catch (e) {
+            alert('Error: ' + e.message);
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
+    function renderDashboard(data) {
+        currentJobId = data.job_id;
+        document.getElementById('resultsSection').style.display = 'block';
+
+        // Set KPIs
+        const s = data.summary;
+        document.getElementById('kpiTriggerRate').innerText = s.overall_trigger_rate_pct + '%';
+        document.getElementById('kpiTriggeredLots').innerText = s.total_triggered_lots.toLocaleString();
+        document.getElementById('kpiTotalLots').innerText = s.total_tested_lots.toLocaleString();
+        document.getElementById('kpiDedupRows').innerText = s.total_dedup_rows.toLocaleString();
+        document.getElementById('kpiRawRowsSub').innerText = `From ${s.total_raw_rows.toLocaleString()} raw rows (${s.date_range})`;
+        document.getElementById('reportInfoText').innerText = `File: ${data.filename} | Window: ${s.months_window > 0 ? s.months_window + ' Months' : 'All History'}`;
+
+        // Render Charts & Tables
+        renderWWTab(data.ww_trend);
+        renderCategoryTab('Site', data.site_summary, data.site_pivot, data.site_rates_pivot);
+        renderCategoryTab('Product', data.product_summary, data.product_pivot, data.product_rates_pivot);
+        renderCategoryTab('Screenplay', data.screenplay_summary, data.screenplay_pivot, data.screenplay_rates_pivot);
+        renderTable('tableTriggeredContainer', data.triggered_details_sample);
+        renderTable('tableFullDataContainer', data.full_data_sample);
+    }
+
+    function renderWWTab(wwData) {
+        renderTable('tableWwContainer', wwData);
+        if (!wwData || wwData.length === 0) return;
+
+        const labels = wwData.map(d => d.WorkWeek);
+        const counts = wwData.map(d => d.TRIGGERED_LOTS);
+        const rates = wwData.map(d => d.TRIGGER_RATE_PCT);
+
+        createBarLineChart('chartWwCounts', labels, counts, 'Triggered Lots', '#0071c5');
+        createLineChart('chartWwRates', labels, rates, 'Trigger Rate (%)', '#c2185b', true);
+    }
+
+    function renderCategoryTab(catName, summaryData, countsPivot, ratesPivot) {
+        const containerId = `table${catName}Container`;
+        renderTable(containerId, summaryData);
+
+        if (countsPivot && countsPivot.length > 0) {
+            const labels = countsPivot.map(d => d.WorkWeek);
+            const datasets = [];
+            const cols = Object.keys(countsPivot[0]).filter(k => k !== 'WorkWeek');
+            const colors = ['#0071c5', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#14b8a6', '#6366f1'];
+
+            cols.forEach((col, idx) => {
+                datasets.push({
+                    label: col,
+                    data: countsPivot.map(d => d[col] || 0),
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length],
+                    tension: 0.2,
+                    borderWidth: 2,
+                    pointRadius: 3
+                });
+            });
+            createMultiLineChart(`chart${catName}Counts`, labels, datasets, 'Triggered Lots');
+        }
+
+        if (ratesPivot && ratesPivot.length > 0) {
+            const labels = ratesPivot.map(d => d.WorkWeek);
+            const datasets = [];
+            const cols = Object.keys(ratesPivot[0]).filter(k => k !== 'WorkWeek');
+            const colors = ['#0071c5', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#14b8a6', '#6366f1'];
+
+            cols.forEach((col, idx) => {
+                datasets.push({
+                    label: col,
+                    data: ratesPivot.map(d => d[col] || 0),
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length],
+                    tension: 0.2,
+                    borderWidth: 2,
+                    pointRadius: 3
+                });
+            });
+            createMultiLineChart(`chart${catName}Rates`, labels, datasets, 'Trigger Rate (%)', true);
+        }
+    }
+
+    function renderTable(containerId, rows) {
+        const container = document.getElementById(containerId);
+        if (!rows || rows.length === 0) {
+            container.innerHTML = '<p style="padding: 14px; color: var(--text-muted);">No records found.</p>';
+            return;
+        }
+
+        const headers = Object.keys(rows[0]);
+        let html = '<table><thead><tr>';
+        headers.forEach(h => html += `<th>${h}</th>`);
+        html += '</tr></thead><tbody>';
+
+        rows.forEach(r => {
+            html += '<tr>';
+            headers.forEach(h => {
+                let val = r[h] !== undefined && r[h] !== null ? r[h] : '';
+                if (h === 'CONDITIONNAME' || h === 'PASS') {
+                    const isFail = String(val).toUpperCase().includes('FAIL') || String(val).toUpperCase() === 'N';
+                    html += `<td><span class="status-badge ${isFail ? 'status-fails' : 'status-pass'}">${val}</span></td>`;
+                } else {
+                    html += `<td>${val}</td>`;
+                }
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function createBarLineChart(canvasId, labels, data, label, color) {
+        if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        chartInstances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: data,
+                    backgroundColor: color + '99',
+                    borderColor: color,
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+
+    function createLineChart(canvasId, labels, data, label, color, isPct = false) {
+        if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        chartInstances[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => isPct ? v + '%' : v }
+                    }
+                }
+            }
+        });
+    }
+
+    function createMultiLineChart(canvasId, labels, datasets, title, isPct = false) {
+        if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        chartInstances[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => isPct ? v + '%' : v }
+                    }
+                }
+            }
+        });
+    }
+
+    function downloadExcel() {
+        if (currentJobId) {
+            window.location.href = `/api/download/${currentJobId}`;
+        }
+    }
+</script>
+</body>
+</html>
